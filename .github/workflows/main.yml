@@ -34,9 +34,9 @@ jobs:
             apt-get update
             apt-get install -y --no-install-recommends wget ca-certificates
           fi
-          if ! command -v python3 >/dev/null 2>&1; then
+          if ! command -v python3 >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1 || ! command -v rsync >/dev/null 2>&1 || ! command -v file >/dev/null 2>&1; then
             apt-get update
-            apt-get install -y --no-install-recommends python3
+            apt-get install -y --no-install-recommends python3 ffmpeg rsync file
           fi
 
           export ANDROID_HOME="/usr/lib/android-sdk"
@@ -97,10 +97,6 @@ jobs:
       - name: Download and Extract Master Project (~3.9GB)
         run: |
           set -euo pipefail
-          if ! command -v rsync >/dev/null 2>&1; then
-            apt-get update
-            apt-get install -y --no-install-recommends rsync
-          fi
           echo "Скачивание исправленного мастер-проекта (Integrity Verified Edition)..."
           wget --continue --tries=20 --waitretry=10 --timeout=120 --read-timeout=120 \
             --progress=dot:giga \
