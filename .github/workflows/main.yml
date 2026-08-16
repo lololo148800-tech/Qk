@@ -172,6 +172,37 @@ jobs:
           echo "--- Project size ---"
           du -sh .
 
+      - name: Quarantine known-broken assets
+        run: |
+          set -euo pipefail
+          echo "Известные небезопасные ассеты (не в формате Godot / случайные данные):"
+          echo "  - assets/horror_packs/brand/Lord Brand Horror RP/materials/entity.material (формат Minecraft Bedrock JSON, не Godot)"
+          echo "  - assets/horror_packs/brand/Lord Brand Horror RP/materials/particles.material (формат Minecraft Bedrock JSON, не Godot)"
+          echo "  - assets/models/player/humanoid_female.mesh (случайные байты, не валидный mesh)"
+          echo "  - assets/models/player/humanoid_male.mesh (случайные байты, не валидный mesh)"
+
+          mkdir -p _quarantine
+
+          BROKEN_FILES=(
+            "assets/horror_packs/brand/Lord Brand Horror RP/materials/entity.material"
+            "assets/horror_packs/brand/Lord Brand Horror RP/materials/particles.material"
+            "assets/models/player/humanoid_female.mesh"
+            "assets/models/player/humanoid_male.mesh"
+          )
+
+          for f in "${BROKEN_FILES[@]}"; do
+            if [ -f "$f" ]; then
+              dest="_quarantine/$(echo "$f" | tr '/' '__')"
+              mv "$f" "$dest"
+              echo "Вынесено из проекта: $f -> $dest"
+            else
+              echo "Не найдено (уже отсутствует или путь изменился): $f"
+            fi
+          done
+
+          echo "--- Итог: содержимое _quarantine/ ---"
+          ls -la _quarantine/ || true
+
       - name: Run Build and Validation Helper
         run: |
           set -euo pipefail
