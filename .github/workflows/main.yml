@@ -181,7 +181,10 @@ jobs:
           echo "  - assets/models/player/humanoid_female.mesh (случайные байты, не валидный mesh)"
           echo "  - assets/models/player/humanoid_male.mesh (случайные байты, не валидный mesh)"
 
-          mkdir -p _quarantine
+          # ВАЖНО: карантин должен быть ВНЕ res:// (вне корня проекта),
+          # иначе Godot всё равно просканирует его как ресурс.
+          QUARANTINE_DIR="$HOME/_voxelverse_quarantine"
+          mkdir -p "$QUARANTINE_DIR"
 
           BROKEN_FILES=(
             "assets/horror_packs/brand/Lord Brand Horror RP/materials/entity.material"
@@ -192,7 +195,7 @@ jobs:
 
           for f in "${BROKEN_FILES[@]}"; do
             if [ -f "$f" ]; then
-              dest="_quarantine/$(echo "$f" | tr '/' '__')"
+              dest="$QUARANTINE_DIR/$(echo "$f" | tr '/' '__')"
               mv "$f" "$dest"
               echo "Вынесено из проекта: $f -> $dest"
             else
@@ -200,8 +203,18 @@ jobs:
             fi
           done
 
-          echo "--- Итог: содержимое _quarantine/ ---"
-          ls -la _quarantine/ || true
+          # Также подчищаем .import-метаданные и .godot/imported кэш от предыдущих
+          # неудачных попыток импорта этих же файлов (если остались от прошлого запуска)
+          find . -path ./.git -prune -o -name "*.import" -print 2>/dev/null | while read -r imp; do
+            src="${imp%.import}"
+            if [ ! -f "$src" ]; then
+              rm -f "$imp"
+            fi
+          done
+          rm -rf .godot/imported 2>/dev/null || true
+
+          echo "--- Итог: содержимое $QUARANTINE_DIR ---"
+          ls -la "$QUARANTINE_DIR" || true
 
       - name: Run Build and Validation Helper
         run: |
