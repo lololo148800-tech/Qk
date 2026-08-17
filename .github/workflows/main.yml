@@ -63,7 +63,7 @@ jobs:
             test -e "$required_file" || { echo "Missing required Android tool: $required_file"; exit 1; }
           done
 
-          mkdir -p "$HOME/.local/share/godot/export_templates"
+          mkdir -p "$HOME/.config/godot" "$HOME/.local/share/godot/export_templates"
           echo "--- Поиск существующих export-шаблонов Godot в образе ---"
           find / -xdev -iname "android_release.apk" -o -iname "android_debug.apk" 2>/dev/null | sed -n '1,20p' || true
           echo "--- Содержимое возможных исходных папок с шаблонами ---"
