@@ -115,7 +115,6 @@ jobs:
               SOURCE_DIR="extracted_root/voxel_source"
           fi
 
-          # rsync вместо mv: сливает директории (например .github) вместо падения на конфликте
           rsync -a "$SOURCE_DIR"/ .
           rm -rf extracted_root
 
@@ -125,9 +124,6 @@ jobs:
               exit 1
           fi
 
-          # Всегда используем собственный проверенный export_presets.cfg —
-          # архив может содержать свой (сломанный/неполный) конфиг,
-          # который не указывает правильный путь к keystore.
           if [ -f "export_presets.cfg" ]; then
             echo "В архиве уже был export_presets.cfg — сохраняю его как export_presets.cfg.from_archive для справки и заменяю на проверенный."
             mv export_presets.cfg export_presets.cfg.from_archive
@@ -185,8 +181,6 @@ jobs:
           echo "  - assets/models/player/humanoid_female.mesh (случайные байты, не валидный mesh)"
           echo "  - assets/models/player/humanoid_male.mesh (случайные байты, не валидный mesh)"
 
-          # ВАЖНО: карантин должен быть ВНЕ res:// (вне корня проекта),
-          # иначе Godot всё равно просканирует его как ресурс.
           QUARANTINE_DIR="$HOME/_voxelverse_quarantine"
           mkdir -p "$QUARANTINE_DIR"
 
@@ -207,8 +201,6 @@ jobs:
             fi
           done
 
-          # Также подчищаем .import-метаданные и .godot/imported кэш от предыдущих
-          # неудачных попыток импорта этих же файлов (если остались от прошлого запуска)
           find . -path ./.git -prune -o -name "*.import" -print 2>/dev/null | while read -r imp; do
             src="${imp%.import}"
             if [ ! -f "$src" ]; then
@@ -219,6 +211,35 @@ jobs:
 
           echo "--- Итог: содержимое $QUARANTINE_DIR ---"
           ls -la "$QUARANTINE_DIR" || true
+
+      - name: Fix and Verify Godot Export Templates
+        run: |
+          set -euo pipefail
+          echo "=== Диагностика окружения ==="
+          echo "HOME: $HOME"
+          echo "USER: $(whoami)"
+          
+          echo "=== Поиск android_debug.apk в системе ==="
+          TEMPLATE_PATH=$(find / -name "android_debug.apk" 2>/dev/null | head -n 1)
+          echo "Найден шаблон: ${TEMPLATE_PATH:-не найден}"
+          
+          TARGET_DIR="$HOME/.local/share/godot/export_templates/4.3.stable"
+          mkdir -p "$TARGET_DIR"
+          
+          if [ -n "$TEMPLATE_PATH" ]; then
+            SOURCE_DIR=$(dirname "$TEMPLATE_PATH")
+            echo "Копируем шаблоны из $SOURCE_DIR в $TARGET_DIR"
+            cp -v "$SOURCE_DIR"/* "$TARGET_DIR/"
+          else
+            echo "⚠️ Внимание: шаблоны не найдены автоматически! Скачиваем принудительно..."
+            wget -q https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz -O /tmp/templates.zip
+            unzip -q /tmp/templates.zip -d /tmp/templates_unpacked
+            mkdir -p "$HOME/.local/share/godot/export_templates/"
+            mv /tmp/templates_unpacked/export_templates "$HOME/.local/share/godot/export_templates/4.3.stable"
+          fi
+          
+          echo "=== Содержимое целевой папки шаблонов ==="
+          ls -la "$HOME/.local/share/godot/export_templates/4.3.stable"
 
       - name: Run Build and Validation Helper
         run: |
