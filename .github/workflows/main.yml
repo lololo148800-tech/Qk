@@ -125,10 +125,15 @@ jobs:
               exit 1
           fi
 
-          # Автосоздание export_presets.cfg, если его нет в архиве
-          if [ ! -f "export_presets.cfg" ]; then
-            echo "Android export preset отсутствует; создаю чистый Android-пресет."
-            printf '%s\n' \
+          # Всегда используем собственный проверенный export_presets.cfg —
+          # архив может содержать свой (сломанный/неполный) конфиг,
+          # который не указывает правильный путь к keystore.
+          if [ -f "export_presets.cfg" ]; then
+            echo "В архиве уже был export_presets.cfg — сохраняю его как export_presets.cfg.from_archive для справки и заменяю на проверенный."
+            mv export_presets.cfg export_presets.cfg.from_archive
+          fi
+          echo "Записываю собственный Android export preset."
+          printf '%s\n' \
               '[preset.0]' \
               'name="Android"' \
               'platform="Android"' \
@@ -167,7 +172,6 @@ jobs:
               'version/name="2.0.0"' \
               'permissions/internet=true' \
               > export_presets.cfg
-          fi
 
           echo "--- Project size ---"
           du -sh .
